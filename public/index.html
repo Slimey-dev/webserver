@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<p>Hello world!</p>
+<img alt="1" src="../images/boykisser.jpeg">
+<button id="execute-command" style="border: thick blue;">Execute Command</button>
+
+<script>
+    document.getElementById("execute-command").addEventListener("click", async () => {
+        try {
+            const response = await fetch("/execute-command", {method: "POST"});
+
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+
+            const result = await response.text();
+            alert(result);
+        } catch (error) {
+            console.error("Error executing command:", error);
+            alert("Error executing command. Check the console for details.");
+        }
+    });
+</script>
+</body>
+</html>
