@@ -10,20 +10,15 @@
 <button id="execute-command" style="border: thick blue;">Execute Command</button>
 
 <script>
-    document.getElementById("execute-command").addEventListener("click", async () => {
-        try {
-            const response = await fetch("/execute-command", {method: "POST"});
-
-            if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
-            }
-
-            const result = await response.text();
-            alert(result);
-        } catch (error) {
-            console.error("Error executing command:", error);
-            alert("Error executing command. Check the console for details.");
-        }
+    document.getElementById('execute-command').addEventListener('click', () => {
+        fetch('/execute')
+            .then(response => response.text())
+            .then(output => {
+                console.log('Command output:', output);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
     });
 </script>
 </body>
