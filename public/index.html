@@ -8,6 +8,8 @@
 <p>Hello world!</p>
 <img alt="1" src="../images/boykisser.jpeg">
 <button id="execute-command" style="border: thick blue;">Execute Command</button>
+<label for="inputField">URL:</label><input id="inputField" placeholder="Enter text here" type="text">
+<button onclick="sendString()">Send</button>
 
 <script>
     document.getElementById('execute-command').addEventListener('click', () => {
@@ -20,6 +22,14 @@
                 console.error('Error:', error);
             });
     });
+
+    async function sendString() {
+        const inputField = document.getElementById('inputField');
+        const inputValue = inputField.value;
+        const response = await fetch(`/execute?input=${inputValue}`);
+        const responseData = await response.text();
+        console.log(responseData);
+    }
 </script>
 </body>
 </html>

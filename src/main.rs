@@ -3,17 +3,24 @@ use std::process::{Command, Stdio};
 
 use actix_files::Files;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use serde::Deserialize;
 
+#[derive(Deserialize)]
+struct QueryParams {
+    input: String,
+}
 #[get("/")]
 async fn index() -> impl Responder {
     let html = std::fs::read_to_string("public/index.html").unwrap();
     HttpResponse::Ok().content_type("text/html").body(html)
 }
 
-async fn execute_command() -> impl Responder {
+async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
     if !std::path::Path::new("dependency").exists() {
         std::fs::create_dir("dependency").expect("Failed to create dependency folder");
     }
+
+    let url: String = url.input.clone();
 
     let check_output = Command::new("dependency/yt-dlp").arg("--version").output();
 
@@ -128,7 +135,11 @@ async fn execute_command() -> impl Responder {
     } else {
         println!("ffmpeg is already installed");
     }
-    let url = "https://youtu.be/qwxZU0VkWII";
+    if url.is_empty() {
+        return HttpResponse::Ok().body("No URL provided");
+    } else {
+        println!("URL: {}", url);
+    }
     let output = Command::new("dependency/yt-dlp.exe")
         .arg("-x")
         .arg("--audio-format")
