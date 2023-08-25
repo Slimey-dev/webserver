@@ -1,4 +1,4 @@
-use std::io;
+use std::{fs, io};
 use std::process::{Command, Stdio};
 
 use actix_files::Files;
@@ -9,6 +9,7 @@ use serde::Deserialize;
 struct QueryParams {
     input: String,
 }
+
 #[get("/")]
 async fn index() -> impl Responder {
     let html = std::fs::read_to_string("public/index.html").unwrap();
@@ -40,7 +41,7 @@ async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
                 .arg("-L")
                 .arg("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp")
                 .arg("-o")
-                .arg("/usr/local/bin/yt-dlp")
+                .arg("dependency/yt-dlp")
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .status()
@@ -48,7 +49,7 @@ async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
 
             Command::new("chmod")
                 .arg("a+rx")
-                .arg("/usr/local/bin/yt-dlp")
+                .arg("dependency/yt-dlp")
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .status()
@@ -102,33 +103,92 @@ async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
 
             println!("ffmpeg installed successfully on Windows");
         } else if cfg!(target_os = "linux") {
-            let _install_ffmpeg_output = Command::new("wget")
-                .arg("https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz")
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status()
-                .expect("Failed to download ffmpeg");
+            let check_ffmpeg = Command::new("dependency/ffmpeg")
+                .arg("-version")
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
 
-            Command::new("tar")
-                .arg("xf")
-                .arg("ffmpeg-release-amd64-static.tar.xz")
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status()
-                .expect("Failed to extract ffmpeg");
+            if check_ffmpeg.is_err() {
+                let _install_ffmpeg_output = Command::new("wget")
+                    .arg("https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz")
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .expect("Failed to download ffmpeg");
 
-            let ffmpeg_dir = "ffmpeg-*-amd64-static";
-            Command::new("sudo")
-                .arg("cp")
-                .arg(format!("{}/ffmpeg", ffmpeg_dir))
-                .arg(format!("{}/ffprobe", ffmpeg_dir))
-                .arg("/usr/local/bin/")
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status()
-                .expect("Failed to copy ffmpeg and ffprobe to /usr/local/bin");
+                Command::new("tar")
+                    .arg("xf")
+                    .arg("ffmpeg-release-amd64-static.tar.xz")
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .expect("Failed to extract ffmpeg");
 
-            println!("ffmpeg installed successfully on Linux");
+                let parent_dir = ".";
+                let prefix = "ffmpeg-";
+
+                match fs::read_dir(parent_dir) {
+                    Ok(entries) => {
+                        for entry_result in entries {
+                            match entry_result {
+                                Ok(entry) => {
+                                    let path = entry.path();
+
+                                    if path.is_dir() && path.file_name().unwrap().to_string_lossy().starts_with(prefix) {
+                                        println!("Found directory: {:?}", path);
+                                        fs::copy(path.join("ffmpeg"), "dependency/ffmpeg").expect("Failed to copy ffmpeg");
+                                        fs::copy(path.join("ffprobe"), "dependency/ffprobe").expect("Failed to copy ffprobe");
+                                        Command::new("rm")
+                                            .arg("-rf")
+                                            .arg(path)
+                                            .stdout(Stdio::inherit())
+                                            .stderr(Stdio::inherit())
+                                            .status()
+                                            .expect("Failed to remove ffmpeg-*/");
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading entry: {}", e);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error reading directory: {}", e);
+                    }
+                }
+                
+                
+
+                Command::new("rm")
+                    .arg("-rf")
+                    .arg("ffmpeg-release-amd64-static.tar.xz")
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .expect("Failed to remove ffmpeg-release-amd64-static.tar.xz");
+
+                Command::new("chmod")
+                    .arg("a+rx")
+                    .arg("dependency/ffmpeg")
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .expect("Failed to set executable permissions for ffmpeg");
+
+                Command::new("chmod")
+                    .arg("a+rx")
+                    .arg("dependency/ffprobe")
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .status()
+                    .expect("Failed to set executable permissions for ffprobe");
+
+                println!("ffmpeg installed successfully on Linux");
+            } else {
+                println!("ffmpeg is already installed");
+            }
         } else {
             println!("Unsupported platform");
         }
@@ -140,15 +200,29 @@ async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
     } else {
         println!("URL: {}", url);
     }
-    let output = Command::new("dependency/yt-dlp.exe")
-        .arg("-x")
-        .arg("--audio-format")
-        .arg("mp3")
-        .arg(url)
-        .output()
-        .expect("Failed to execute command");
-
-    let output_str = String::from_utf8(output.stdout).unwrap();
+    let output = if cfg!(target_os = "windows") {
+        Command::new("dependency/yt-dlp.exe")
+            .arg("-x")
+            .arg("--audio-format")
+            .arg("mp3")
+            .arg(url)
+            .output()
+            .expect("Failed to execute command")
+    } else if cfg!(target_os = "linux") {
+        Command::new("dependency/yt-dlp")
+            .arg("--ffmpeg-location")
+            .arg("dependency/")
+            .arg("-x")
+            .arg("--audio-format")
+            .arg("mp3")
+            .arg(url)
+            .output()
+            .expect("Failed to execute command")
+    } else {
+        panic!("Unsupported operating system");
+    };
+    
+    let output_str = String::from_utf8_lossy(&output.stdout).to_string();
     HttpResponse::Ok().body(output_str)
 }
 
