@@ -1,5 +1,5 @@
-use std::{fs, io};
 use std::process::{Command, Stdio};
+use std::{fs, io};
 
 use actix_files::Files;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
@@ -135,10 +135,18 @@ async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
                                 Ok(entry) => {
                                     let path = entry.path();
 
-                                    if path.is_dir() && path.file_name().unwrap().to_string_lossy().starts_with(prefix) {
+                                    if path.is_dir()
+                                        && path
+                                            .file_name()
+                                            .unwrap()
+                                            .to_string_lossy()
+                                            .starts_with(prefix)
+                                    {
                                         println!("Found directory: {:?}", path);
-                                        fs::copy(path.join("ffmpeg"), "dependency/ffmpeg").expect("Failed to copy ffmpeg");
-                                        fs::copy(path.join("ffprobe"), "dependency/ffprobe").expect("Failed to copy ffprobe");
+                                        fs::copy(path.join("ffmpeg"), "dependency/ffmpeg")
+                                            .expect("Failed to copy ffmpeg");
+                                        fs::copy(path.join("ffprobe"), "dependency/ffprobe")
+                                            .expect("Failed to copy ffprobe");
                                         Command::new("rm")
                                             .arg("-rf")
                                             .arg(path)
@@ -158,8 +166,6 @@ async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
                         eprintln!("Error reading directory: {}", e);
                     }
                 }
-                
-                
 
                 Command::new("rm")
                     .arg("-rf")
@@ -221,7 +227,7 @@ async fn execute_command(url: web::Query<QueryParams>) -> impl Responder {
     } else {
         panic!("Unsupported operating system");
     };
-    
+
     let output_str = String::from_utf8_lossy(&output.stdout).to_string();
     HttpResponse::Ok().body(output_str)
 }

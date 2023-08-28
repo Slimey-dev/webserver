@@ -2,27 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link href="public/dist/output.css" rel="stylesheet">
     <title>Title</title>
 </head>
-<body>
-<p>Hello world!</p>
-<img alt="1" src="../images/boykisser.jpeg">
-<button id="execute-command" style="border: thick blue;">Execute Command</button>
-<label for="inputField">URL:</label><input id="inputField" placeholder="Enter text here" type="text">
-<button onclick="sendString()">Send</button>
+<body class="bg-gray-600 flex items-center h-screen flex-col">
+
+<p class="text-5xl p-10">You like downloading mp3 from youtube, don't u?</p>
+<p class="text-3xl p-4">You can customize this page to your liking, I am not a designer :D</p>
+<p>This is only for educational purposes</p>
+<img alt="1" class="w-48 m-4" src="../images/boykisser.jpeg">
+<label class="p-4" for="inputField">URL:</label><input id="inputField" placeholder="Enter text here" type="text">
+<button class="bg-gray-700 border-solid border-2 rounded-full border-inherit w-24 m-4 p-1" onclick="sendString()">Send
+</button>
 
 <script>
-    document.getElementById('execute-command').addEventListener('click', () => {
-        fetch('/execute')
-            .then(response => response.text())
-            .then(output => {
-                console.log('Command output:', output);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-    });
-
     async function sendString() {
         const inputField = document.getElementById('inputField');
         const inputValue = inputField.value;
